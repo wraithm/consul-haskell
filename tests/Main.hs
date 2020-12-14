@@ -87,12 +87,12 @@ localNode = Node localhost localNodeAddr
 consulPort :: PortNumber
 consulPort = 18500
 
-dc1 :: Datacenter
-dc1 = Datacenter "dc1"
+dc1 :: Maybe Datacenter
+dc1 = Just $ Datacenter "dc1"
 
 -- Initialize a new `ConsulClient`.
 newClient :: IO ConsulClient
-newClient = initializeConsulClient localhost consulPort dc1 emptyHttpManager
+newClient = initializeConsulClient localhost consulPort emptyHttpManager
 
 {- Internal Tests -}
 internalKVTests :: TestTree
@@ -114,7 +114,8 @@ internalKVTests =
 testGetInvalidKey :: TestTree
 testGetInvalidKey = testCase "testGetInvalidKey" $ do
   client@ConsulClient{..} <- newClient
-  x <- getKey client "nokey" Nothing Nothing
+  -- specify the datacenter as part of our request
+  x <- getKey client{ ccDatacenter = dc1  } "nokey" Nothing Nothing
   assertEqual "testGetInvalidKey: Found a key that doesn't exist" x Nothing
 
 testPutKey :: TestTree
@@ -462,7 +463,7 @@ testSequencerLostSession = testCase "testSequencerLostSession" $ do
 -- TODO: drop stringified values (localhost, dc1, etc)
 testIsValidSequencer :: TestTree
 testIsValidSequencer = testCase "testIsValidSequencer" $ do
-  client@ConsulClient{..} <- initializeConsulClient localhost consulPort dc1 Nothing
+  client@ConsulClient{..} <- initializeConsulClient localhost consulPort Nothing
   let req = SessionRequest Nothing (Just "testIsValidSequencer") localNode checkIds (Just Release) (Just "10s")
   result <- createSession client req
   case result of
